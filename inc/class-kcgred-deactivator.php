@@ -1,0 +1,31 @@
+<?php
+/**
+ * Fired during plugin deactivation
+ *
+ * @link       https://kingscrestglobal.com/
+ * @since      1.0.1
+ * @package    kcg-redirection
+ * @subpackage kcg-redirection/inc
+ */
+
+/**
+ * Fired during plugin deactivation.
+ *
+ * This class defines all code necessary to run during the plugin's deactivation.
+ *
+ * @since      1.0.1
+ * @package    kcg-redirection
+ * @subpackage kcg-redirection/inc
+ * @author     Kings Crest Global <info@kingscrestglobal.com>
+ */
+
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+    die;
+}
+
+class kcgred_deactivate_init {
+	public static function kcgred_deactivate() {
+
+	}
+}
