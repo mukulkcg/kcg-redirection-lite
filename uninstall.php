@@ -17,7 +17,7 @@
  *
  * @link       https://kingscrestglobal.com/
  * @since      1.0.1
- * @package    kcg-redirection
+ * @package    redirects-manager
  */
 
 // If this file is called directly, abort.

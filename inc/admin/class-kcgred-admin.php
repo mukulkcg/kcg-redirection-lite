@@ -4,8 +4,8 @@
  *
  * @link       https://kingscrestglobal.com/
  * @since      1.0.1
- * @package    kcg-redirection
- * @subpackage kcg-redirection/inc
+ * @package    redirects-manager
+ * @subpackage redirects-manager/inc
  */
 
 /**
@@ -14,8 +14,8 @@
  * This class defines all code necessary to run during the plugin's features.
  *
  * @since      1.0.1
- * @package    kcg-redirection
- * @subpackage kcg-redirection/inc
+ * @package    redirects-manager
+ * @subpackage redirects-manager/inc
  * @author    Kings Crest Global <info@kingscrestglobal.com>
  */
 
@@ -65,13 +65,13 @@ if ( ! defined( 'WPINC' ) ) {
 
 		$this->create_table();
 
-        $this->current_page = isset($_GET['page']) ? esc_html($_GET['page']) : 'kcg-redirects';
+        $this->current_page = isset($_GET['page']) ? esc_html($_GET['page']) : 'redirects-manager';
 
 	}
 
 
 	/**
-	 * Create table for KCG Redirection
+	 * Create table for Redirects Managerion
 	 *
      * @since      1.0.1
 	 */
@@ -103,8 +103,8 @@ if ( ! defined( 'WPINC' ) ) {
      * @since      1.0.1
 	 */
 	public function kcgred_enqueue_admin_styles() {
-	    wp_enqueue_style( $this->plugin_name, KCGRED_URL . 'assets/css/kcg-redirection-style.css', array(), $this->plugin_version, 'all' );
-		wp_enqueue_script( $this->plugin_name, KCGRED_URL . 'assets/js/kcg-redirection-script.js', array(), $this->plugin_version, false);
+	    wp_enqueue_style( $this->plugin_name, KCGRED_URL . 'assets/css/redirects-manager-style.css', array(), $this->plugin_version, 'all' );
+		wp_enqueue_script( $this->plugin_name, KCGRED_URL . 'assets/js/redirects-manager-script.js', array(), $this->plugin_version, false);
 
 		
 		// Localize the script with new data
@@ -120,44 +120,44 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * Add KCG Redirection navigation
+	 * Add Redirects Managerion navigation
 	 *
      * @since      1.0.1
 	 */
 	public function kcgred_add_admin_menu() {
         add_menu_page( 
             'Settings',        // Page title
-            'KCG Redirect Manager',                // Menu title
+            'Redirects Manager Manager',                // Menu title
             'manage_options',
-            'kcg-redirects',                // Menu slug
+            'redirects-manager',                // Menu slug
             [$this, 'kcg_redirect_admin_page'], // Callback function
             'dashicons-randomize',
         );
 
         add_submenu_page( 
-            'kcg-redirects', 
+            'redirects-manager', 
             'Reports', 
             'Reports', 
             'manage_options', 
-            'kcg-redirects-reports', 
+            'redirects-manager-reports', 
             [$this, 'kcgred_reports_callback_function'] 
         );
 
         add_submenu_page( 
-            'kcg-redirects', 
+            'redirects-manager', 
             'Import / Export', 
             'Import / Export', 
             'manage_options', 
-            'kcg-redirects-import-export', 
+            'redirects-manager-import-export', 
             [$this, 'kcgred_import_export_callback_function'] 
         );
 
         add_submenu_page( 
-            'kcg-redirects', 
+            'redirects-manager', 
             'Support', 
             'Support', 
             'manage_options', 
-            'kcg-redirects-support', 
+            'redirects-manager-support', 
             [$this, 'kcgred_support_callback_function'] 
         );
 	}
@@ -166,7 +166,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * Add KCG Redirection navigation tab 
+	 * Add Redirects Managerion navigation tab 
 	 *
      * @since      1.0.1
 	 */
@@ -174,11 +174,10 @@ if ( ! defined( 'WPINC' ) ) {
 		$redirect_link = admin_url( 'admin.php?page=' );
 
         $nav = array(
-            'kcg-redirects'                 => 'Settings', 
-            'kcg-redirects-reports'         => 'Reports', 
-            'kcg-redirects-import-export'   => 'Import / Export',
-            'kcg-redirects-support'         => 'Support', 
-            'kcg-redirects-license'         => 'License'
+            'redirects-manager'                 => 'Settings', 
+            'redirects-manager-reports'         => 'Reports', 
+            'redirects-manager-import-export'   => 'Import / Export',
+            'redirects-manager-support'         => 'Support', 
         );
         ?>
         <div class="kcgred-navigation-wrapper">
@@ -197,7 +196,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * KCG Redirection navigation Callback
+	 * Redirects Managerion navigation Callback
 	 *
      * @since      1.0.1
 	 */
@@ -292,7 +291,7 @@ if ( ! defined( 'WPINC' ) ) {
                 </div>
                 <div class="kcgred-premium-notice-wrapper">
                     <div class="kcgred-redirects-content">
-                        <p>Unlock advanced features with KCG Redirects Pro — manage bulk redirects, monitor 404s in real time, and boost your SEO performance.</p>
+                        <p>Unlock advanced features with Redirects Managers Pro — manage bulk redirects, monitor 404s in real time, and boost your SEO performance.</p>
                         <p>Upgrade now to take full control of your site’s redirections.</p>
                         <div class="kcgred-button-wrapper">
                             <a href="#" class="button">Buy Now</a>
@@ -434,15 +433,15 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * KCG Redirection add view details button on plugin
+	 * Redirects Managerion add view details button on plugin
 	 *
      * @since      1.0.1
 	 */
     public function kcgred_add_view_details_button( $links, $file ) {
         $plugin_host = $this->kcgred_is_plugin_from_wporg($file);
         
-        if ( (strpos( $file, 'kcg-redirection.php' ) !== false) && ($plugin_host === false) ) {
-            $links[] = '<a href="https://kingscrestglobal.com/kcg-redirects" target="_blank">View details</a>';
+        if ( (strpos( $file, 'redirects-manager.php' ) !== false) && ($plugin_host === false) ) {
+            $links[] = '<a href="https://kingscrestglobal.com/redirects-manager" target="_blank">View details</a>';
         }
 
         return $links;
@@ -453,7 +452,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * KCG Redirection check plugin from wp.org or custom hosted
+	 * Redirects Managerion check plugin from wp.org or custom hosted
 	 *
      * @since      1.0.1
 	 */
@@ -472,13 +471,13 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * KCG Redirection add pagination link function
+	 * Redirects Managerion add pagination link function
 	 *
      * @since      1.0.1
 	 */
     private function kcgred_get_pagination_links($current_page, $total_pages) {
         $links = '';
-        $base_url = admin_url('admin.php?page=kcg-redirects&tab=' . $current_page);
+        $base_url = admin_url('admin.php?page=redirects-manager&tab=' . $current_page);
         
         // Add per_page parameter if set
         if (isset($_GET['per_page'])) {
@@ -554,7 +553,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * KCG Redirection redirect reports callback function
+	 * Redirects Managerion redirect reports callback function
 	 *
      * @since      1.0.1
 	 */
@@ -597,7 +596,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * KCG Redirection redirect support page callback function
+	 * Redirects Managerion redirect support page callback function
 	 *
      * @since      1.0.1
 	 */
@@ -615,7 +614,7 @@ if ( ! defined( 'WPINC' ) ) {
     }
 
 	/**
-	 * KCG Redirection redirect Import / Export callback function
+	 * Redirects Managerion redirect Import / Export callback function
 	 *
      * @since      1.0.1
 	 */
@@ -655,7 +654,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * KCG Redirection save redirect data
+	 * Redirects Managerion save redirect data
 	 *
      * @since      1.0.1
 	 */
@@ -733,7 +732,7 @@ if ( ! defined( 'WPINC' ) ) {
     
 
 	/**
-	 * KCG Redirection delete redirect data
+	 * Redirects Managerion delete redirect data
 	 *
      * @since      1.0.1
 	 */
@@ -761,7 +760,7 @@ if ( ! defined( 'WPINC' ) ) {
     
 
 	/**
-	 * KCG Redirection change redirect status
+	 * Redirects Managerion change redirect status
 	 *
      * @since      1.0.1
 	 */
@@ -797,7 +796,7 @@ if ( ! defined( 'WPINC' ) ) {
     
 
 	/**
-	 * KCG Redirection process redirect
+	 * Redirects Managerion process redirect
 	 *
      * @since      1.0.1
 	 */
@@ -846,7 +845,7 @@ if ( ! defined( 'WPINC' ) ) {
     
 
 	/**
-	 * KCG Redirection redirect to the destination
+	 * Redirects Managerion redirect to the destination
 	 *
      * @since      1.0.1
 	 */
@@ -871,7 +870,7 @@ if ( ! defined( 'WPINC' ) ) {
     
 
 	/**
-	 * KCG Redirection export redirects
+	 * Redirects Managerion export redirects
 	 *
      * @since      1.0.1
 	 */
@@ -908,7 +907,7 @@ if ( ! defined( 'WPINC' ) ) {
     
 
 	/**
-	 * KCG Redirection import redirects
+	 * Redirects Managerion import redirects
 	 *
      * @since      1.0.1
 	 */
@@ -961,7 +960,7 @@ if ( ! defined( 'WPINC' ) ) {
     
 
 	/**
-	 * KCG Redirection update stats
+	 * Redirects Managerion update stats
 	 *
      * @since      1.0.1
 	 */

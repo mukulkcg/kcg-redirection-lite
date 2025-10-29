@@ -4,8 +4,8 @@
  *
  * @link       https://kingscrestglobal.com/
  * @since      1.0.1
- * @package    kcg-redirection
- * @subpackage kcg-redirection/inc
+ * @package    redirects-manager
+ * @subpackage redirects-manager/inc
  */
 
 /**
@@ -14,8 +14,8 @@
  * This class defines all code necessary to run during the plugin's features.
  *
  * @since      1.0.1
- * @package    kcg-redirection
- * @subpackage kcg-redirection/inc
+ * @package    redirects-manager
+ * @subpackage redirects-manager/inc
  * @author     Kings Crest Global <info@kingscrestglobal.com>
  */
 
@@ -35,7 +35,7 @@ class kcgred_features_init{
 		} else {
 			$this->plugin_version = '1.0.1';
 		}
-		$this->plugin_name = 'kcg-redirection';
+		$this->plugin_name = 'redirects-manager';
 		$this->load_dependencies();
 		$this->define_admin_hooks();
 	}

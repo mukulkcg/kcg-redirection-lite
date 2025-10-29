@@ -1,11 +1,11 @@
 <?php
 /*
-Plugin Name: KCG Redirection Lite
+Plugin Name: Redirects Manager
 Plugin URI: https://kingscrestglobal.com/
 Description: Efficiently manage 301 redirects to improve site performance and SEO.
 Version: 1.0.1
 Author: Kings Crest Global
-Text Domain: kcg-redirection
+Text Domain: redirects-manager
 Requires PHP: 7.0
 Requires at least: 6.4
 */
