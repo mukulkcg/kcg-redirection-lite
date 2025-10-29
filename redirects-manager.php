@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Redirects Manager
-Plugin URI: https://kingscrestglobal.com/
+Plugin URI: https://kingscrestglobal.com/redirects-manager
 Description: Efficiently manage 301 redirects to improve site performance and SEO.
 Version: 1.0.1
 Author: Kings Crest Global
