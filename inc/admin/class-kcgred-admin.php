@@ -202,6 +202,7 @@ if ( ! defined( 'WPINC' ) ) {
 	 */
 	public function kcg_redirect_admin_page(){
 		global $wpdb;
+        $tableName = $this->table_name;
 
         // Get pagination parameters
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
@@ -217,20 +218,27 @@ if ( ! defined( 'WPINC' ) ) {
         // Calculate offset
         $offset = ($current_page - 1) * $per_page;
         
+
         // Get total count
-        $total_redirects = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}");
+        // $cache_key = 'kcgred_get_total';
+        // $total_redirects = wp_cache_get($cache_key);
+        $total_redirects = $wpdb->get_var("SELECT COUNT(*) FROM {$tableName}");
+        // wp_cache_set($cache_key, $total_redirects);
         
         // Calculate total pages
         $total_pages = ceil($total_redirects / $per_page);
 
-         // Get redirects for current page
-         $redirects = $wpdb->get_results(
-            "SELECT * FROM {$this->table_name} ORDER BY id DESC LIMIT {$per_page} OFFSET {$offset}"
+        // Get redirects for current page
+        // $redirects_key = 'kcgred_get_redirects';
+        // $redirects = wp_cache_get($cache_key);
+        $redirects = $wpdb->get_results(
+            "SELECT * FROM {$tableName} ORDER BY id DESC LIMIT {$per_page} OFFSET {$offset}"
         );
+        // wp_cache_set($redirects_key, $redirects);
 		?>
         <div class="wrap kcgred-redirect-manager">
             <h1><span class="dashicons dashicons-randomize"></span> Redirect Manager</h1>
-            <?php echo $this->kcgred_navigation_tab(); ?>
+            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
             
             <!-- Add New Redirect Form -->
             <div class="kcgred-redirects-form-wrapper">
@@ -241,10 +249,10 @@ if ( ! defined( 'WPINC' ) ) {
                             <div class="kcgred-field">
                                 <label for="redirect_from">Redirect From</label>
                                 <div class="kcgred-input">
-                                    <input type="text" id="redirect_from" name="redirect_from" class="regular-text" placeholder="<?php echo get_site_url('', 'old-page'); ?>" required>
+                                    <input type="text" id="redirect_from" name="redirect_from" class="regular-text" placeholder="<?php echo esc_url(get_site_url('', 'old-page')); ?>" required>
                                     <p class="description">
                                         Enter the old URL <br>
-                                        Example: <code><?php echo get_site_url('', 'old-page'); ?></code>
+                                        Example: <code><?php echo esc_url(get_site_url('', 'old-page')); ?></code>
                                     </p>
                                 </div>
                             </div>
@@ -252,8 +260,8 @@ if ( ! defined( 'WPINC' ) ) {
                             <div class="kcgred-field">
                                 <label for="redirect_to">Redirect To</label>
                                 <div class="kcgred-input">
-                                    <input type="text" id="redirect_to"  name="redirect_to" class="regular-text" placeholder="<?php echo get_site_url('', 'new-page'); ?> or https://example.com" required>
-                                    <p class="description">Enter the new URL<br> Can be internal (<code><?php echo get_site_url('', 'new-page'); ?></code>)<br> or external (<code>https://example.com</code>)</p>
+                                    <input type="text" id="redirect_to"  name="redirect_to" class="regular-text" placeholder="<?php echo esc_url(get_site_url('', 'new-page')); ?> or https://example.com" required>
+                                    <p class="description">Enter the new URL<br> Can be internal (<code><?php echo esc_url(get_site_url('', 'new-page')); ?></code>)<br> or external (<code>https://example.com</code>)</p>
                                 </div>
                             </div>
                             
@@ -302,7 +310,7 @@ if ( ! defined( 'WPINC' ) ) {
             
             <!-- Redirects List -->
             <div class="redirect-list-container">
-                <h2>All Redirects (<?php echo $total_redirects; ?>)</h2>
+                <h2>All Redirects (<?php echo esc_html($total_redirects); ?>)</h2>
                 
                 <?php if (empty($redirects)): ?>
                     <div class="no-redirects">
@@ -323,8 +331,8 @@ if ( ! defined( 'WPINC' ) ) {
                         </thead>
                         <tbody id="redirects-list">
                             <?php foreach ($redirects as $redirect): ?>
-                                <tr data-id="<?php echo $redirect->id; ?>" class="<?php echo ($redirect->status == 1) ? 'active' : 'inactive'; ?>">
-                                    <td><?php echo $redirect->id; ?></td>
+                                <tr data-id="<?php echo esc_attr($redirect->id); ?>" class="<?php echo ($redirect->status == 1) ? 'active' : 'inactive'; ?>">
+                                    <td><?php echo esc_html($redirect->id); ?></td>
                                     <td>
                                         <code><?php echo esc_html($redirect->redirect_from); ?></code>
                                         <?php if (strpos($redirect->redirect_from, '*') !== false): ?>
@@ -335,8 +343,8 @@ if ( ! defined( 'WPINC' ) ) {
                                         <code><?php echo esc_html($redirect->redirect_to); ?></code>
                                     </td>
                                     <td>
-                                        <span class="redirect-type type-<?php echo $redirect->redirect_type; ?>">
-                                            <?php echo $redirect->redirect_type; ?>
+                                        <span class="redirect-type type-<?php echo esc_attr($redirect->redirect_type); ?>">
+                                            <?php echo esc_html($redirect->redirect_type); ?>
                                         </span>
                                     </td>
                                     <td>
@@ -346,16 +354,16 @@ if ( ! defined( 'WPINC' ) ) {
                                         <label class="switch">
                                             <input type="checkbox" 
                                                    class="toggle-status" 
-                                                   data-id="<?php echo $redirect->id; ?>"
+                                                   data-id="<?php echo esc_attr($redirect->id); ?>"
                                                    <?php checked($redirect->status, 1); ?>>
                                             <span class="slider"></span>
                                         </label>
                                     </td>
                                     <td>
-                                        <button class="button button-small edit-redirect" data-id="<?php echo $redirect->id; ?>">
+                                        <button class="button button-small edit-redirect" data-id="<?php echo esc_attr($redirect->id); ?>">
                                             <span class="dashicons dashicons-edit"></span> Edit
                                         </button>
-                                        <button class="button button-small button-link-delete delete-redirect" data-id="<?php echo $redirect->id; ?>">
+                                        <button class="button button-small button-link-delete delete-redirect" data-id="<?php echo esc_attr($redirect->id); ?>">
                                             <span class="dashicons dashicons-trash"></span> Delete
                                         </button>
                                     </td>
@@ -366,20 +374,20 @@ if ( ! defined( 'WPINC' ) ) {
 
                     <!-- Pagination -->
                     <?php if ($total_pages > 1): ?>
-                        <div class="tablenav bottom">
-                            <div class="tablenav-pages">
-                                <span class="displaying-num">
-                                    <?php 
-                                    $start = $offset + 1;
-                                    $end = min($offset + $per_page, $total_pages);
-                                    printf('%d-%d of %d items', $start, $end, $total_pages);
-                                    ?>
-                                </span>
-                                <span class="pagination-links">
-                                    <?php echo $this->kcgred_get_pagination_links($current_page, $total_pages); ?>
-                                </span>
-                            </div>
+                    <div class="tablenav bottom">
+                        <div class="tablenav-pages">
+                            <span class="displaying-num">
+                                <?php 
+                                $start = $offset + 1;
+                                $end = min($offset + $per_page, $total_pages);
+                                printf('%d-%d of %d items', esc_html($start), esc_html($end), esc_html($total_pages));
+                                ?>
+                            </span>
+                            <span class="pagination-links">
+                                <?php echo wp_kses_post($this->kcgred_get_pagination_links(esc_html($current_page), esc_html($total_pages))); ?>
+                            </span>
                         </div>
+                    </div>
                     <?php endif; ?>
                 <?php endif; ?>
             </div>
@@ -571,16 +579,16 @@ if ( ! defined( 'WPINC' ) ) {
         <div class="wrap kcgred-redirect-manager">
             <h1><span class="dashicons dashicons-chart-area"></span> Reports</h1>
 
-            <?php echo $this->kcgred_navigation_tab(); ?>
+            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
 
             <!-- Statistics -->
             <div class="redirect-stats">
                 <div class="stat-box">
-                    <div class="stat-number"><?php echo $total_redirects; ?></div>
+                    <div class="stat-number"><?php echo esc_html($total_redirects); ?></div>
                     <div class="stat-label">Total Redirects</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-number"><?php echo $active_redirects; ?></div>
+                    <div class="stat-number"><?php echo esc_html($active_redirects); ?></div>
                     <div class="stat-label">Active</div>
                 </div>
                 <div class="stat-box hits-count">
@@ -605,7 +613,7 @@ if ( ! defined( 'WPINC' ) ) {
         <div class="wrap kcgred-redirect-manager">
             <h1><span class="dashicons dashicons-microphone"></span> Support</h1>
 
-            <?php echo $this->kcgred_navigation_tab(); ?>
+            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
             <div class="kcgred-tab-section-wrapper">
                 This feature is coming soon!
             </div>
@@ -623,7 +631,7 @@ if ( ! defined( 'WPINC' ) ) {
         <div class="wrap kcgred-redirect-manager">
             <h1><span class="dashicons dashicons-plugins-checked"></span> Import / Export</h1>
             
-            <?php echo $this->kcgred_navigation_tab(); ?>
+            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
             
             <!-- Import/Export -->
             <div class="redirect-tools">
@@ -717,6 +725,9 @@ if ( ! defined( 'WPINC' ) ) {
 				'message'  	=> 'Redirect created successfully',
 			);
         }
+
+        // wp_cache_delete( 'kcgred_get_total' );
+        // wp_cache_delete( 'kcgred_get_redirects' );
 
 		wp_send_json($args);
 		wp_die();

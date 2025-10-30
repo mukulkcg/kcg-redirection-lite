@@ -5,7 +5,11 @@ Plugin URI: https://kingscrestglobal.com/redirects-manager
 Description: Efficiently manage 301 redirects to improve site performance and SEO.
 Version: 1.0.1
 Author: Kings Crest Global
+Author URI:  https://kingscrestglobal.com
+License:     GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: redirects-manager
+Domain Path: /languages
 Requires PHP: 7.0
 Requires at least: 6.4
 */
@@ -60,31 +64,37 @@ if (!function_exists('kcgred_plugin_load_textdomain')) {
  * The code that runs during plugin activation.
  * This action is documented in inc/class-kcgred-activation.php
  */
-function kcgred_activation_function() {
-    require_once KCGRED_DIR . 'inc/class-kcgred-activation.php';
-    kcgred_activations_init::kcgred_activate();
+if (!function_exists('kcgred_activation_function')) {
+    function kcgred_activation_function() {
+        require_once KCGRED_DIR . 'inc/class-kcgred-activation.php';
+        kcgred_activations_init::kcgred_activate();
+    }
+    register_activation_hook( __FILE__, 'kcgred_activation_function' );
 }
-register_activation_hook( __FILE__, 'kcgred_activation_function' );
 
 
 /**
  * The code that runs during plugin deactivation.
  * This action is documented in inc/class-kcgred-deactivator.php
  */
-function kcgred_deactivator_plugin() {
-    require_once KCGRED_DIR. 'inc/class-kcgred-deactivator.php';
-    kcgred_deactivate_init::kcgred_deactivate();
+if (!function_exists('kcgred_deactivator_plugin')) {
+    function kcgred_deactivator_plugin() {
+        require_once KCGRED_DIR. 'inc/class-kcgred-deactivator.php';
+        kcgred_deactivate_init::kcgred_deactivate();
+    }
+    register_deactivation_hook( __FILE__, 'kcgred_deactivator_plugin' );
 }
-register_deactivation_hook( __FILE__, 'kcgred_deactivator_plugin' );
 
 /**
  * The code that runs during plugin uninstall.
  * This action is documented in uninstall.php
  */
-function kcgred_uninstall_plugin() {
-    require_once KCGRED_DIR. 'uninstall.php';
+if (!function_exists('kcgred_uninstall_plugin')) {
+    function kcgred_uninstall_plugin() {
+        require_once KCGRED_DIR. 'uninstall.php';
+    }
+    register_uninstall_hook( __FILE__, 'kcgred_uninstall_plugin' );
 }
-register_uninstall_hook( __FILE__, 'kcgred_uninstall_plugin' );
 
 
 /**
