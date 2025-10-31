@@ -234,8 +234,10 @@
                 console.log(response); 
             });
         }, 30000);
-        
+
         
     });
 
 }(jQuery));
+
+

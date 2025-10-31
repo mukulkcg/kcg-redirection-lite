@@ -28,8 +28,6 @@ if ( ! defined( 'WPINC' ) ) {
 
 	private $table_name;
 
-    private $current_page;
-
 	/**
 	 * The ID of this plugin.
 	 *
@@ -65,13 +63,13 @@ if ( ! defined( 'WPINC' ) ) {
 
 		$this->create_table();
 
-        $this->current_page = isset($_GET['page']) ? esc_html($_GET['page']) : 'redirects-manager';
-
 	}
 
 
+
+
 	/**
-	 * Create table for Redirects Managerion
+	 * Create table for Redirects Manager
 	 *
      * @since      1.0.1
 	 */
@@ -104,7 +102,11 @@ if ( ! defined( 'WPINC' ) ) {
 	 */
 	public function kcgred_enqueue_admin_styles() {
 	    wp_enqueue_style( $this->plugin_name, KCGRED_URL . 'assets/css/redirects-manager-style.css', array(), $this->plugin_version, 'all' );
+
+        wp_enqueue_script( 'chartjs', KCGRED_URL . 'assets/js/chart.js', array(), $this->plugin_version, false);
 		wp_enqueue_script( $this->plugin_name, KCGRED_URL . 'assets/js/redirects-manager-script.js', array(), $this->plugin_version, false);
+
+        wp_enqueue_script( 'kcgred-report', KCGRED_URL . 'assets/js/kcgred-report.js', array( 'chartjs' ), $this->plugin_version, false);
 
 		
 		// Localize the script with new data
@@ -127,11 +129,11 @@ if ( ! defined( 'WPINC' ) ) {
 	public function kcgred_add_admin_menu() {
         add_menu_page( 
             'Settings',        // Page title
-            'Redirects Manager Manager',                // Menu title
+            'Redirects Manager',                // Menu title
             'manage_options',
             'redirects-manager',                // Menu slug
             [$this, 'kcg_redirect_admin_page'], // Callback function
-            'dashicons-randomize',
+            KCGRED_URL . 'assets/img/128x128.png',
         );
 
         add_submenu_page( 
@@ -140,16 +142,16 @@ if ( ! defined( 'WPINC' ) ) {
             'Reports', 
             'manage_options', 
             'redirects-manager-reports', 
-            [$this, 'kcgred_reports_callback_function'] 
+            [$this, 'kcgred_reports_callback_function'], 
         );
 
         add_submenu_page( 
             'redirects-manager', 
-            'Import / Export', 
-            'Import / Export', 
+            '404 Logs', 
+            '404 Logs', 
             'manage_options', 
-            'redirects-manager-import-export', 
-            [$this, 'kcgred_import_export_callback_function'] 
+            'redirects-manager-error-logs', 
+            [$this, 'kcgred_error_logs_callback_function'], 
         );
 
         add_submenu_page( 
@@ -158,7 +160,16 @@ if ( ! defined( 'WPINC' ) ) {
             'Support', 
             'manage_options', 
             'redirects-manager-support', 
-            [$this, 'kcgred_support_callback_function'] 
+            [$this, 'kcgred_support_callback_function'], 
+        );
+
+        add_submenu_page( 
+            'redirects-manager', 
+            'Import / Export', 
+            'Import / Export', 
+            'manage_options', 
+            'redirects-manager-import-export', 
+            [$this, 'kcgred_import_export_callback_function'], 
         );
 	}
 
@@ -172,25 +183,27 @@ if ( ! defined( 'WPINC' ) ) {
 	 */
     public function kcgred_navigation_tab() {
 		$redirect_link = admin_url( 'admin.php?page=' );
+        $current_page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : 'redirects-manager';
 
         $nav = array(
             'redirects-manager'                 => 'Settings', 
             'redirects-manager-reports'         => 'Reports', 
+            'redirects-manager-error-logs'      => '404 Logs', 
             'redirects-manager-import-export'   => 'Import / Export',
             'redirects-manager-support'         => 'Support', 
         );
-        ?>
-        <div class="kcgred-navigation-wrapper">
-            <ul>
-                <?php 
+
+        $output = '';
+        $output .= '<div class="kcgred-navigation-wrapper">';
+            $output .= '<ul>';
                 foreach($nav as $key => $menu) {
-                    $active = ($this->current_page == $key) ? 'active' : '';
-                    echo '<li><a class="'.esc_html($active).'" href="'.esc_url($redirect_link . $key).'">'.esc_html($menu).'</a></li>';
+                    $active = ($current_page == $key) ? 'active' : '';
+                    $output .= '<li><a class="'.esc_html($active).'" href="'.esc_url($redirect_link . $key).'">'.esc_html($menu).'</a></li>';
                 }
-                ?>
-            </ul>
-        </div>
-        <?php
+            $output .= '</ul>';
+        $output .= '</div>';
+
+        return $output;
     }
 
 
@@ -202,7 +215,6 @@ if ( ! defined( 'WPINC' ) ) {
 	 */
 	public function kcg_redirect_admin_page(){
 		global $wpdb;
-        $tableName = $this->table_name;
 
         // Get pagination parameters
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
@@ -218,27 +230,21 @@ if ( ! defined( 'WPINC' ) ) {
         // Calculate offset
         $offset = ($current_page - 1) * $per_page;
         
-
         // Get total count
-        // $cache_key = 'kcgred_get_total';
-        // $total_redirects = wp_cache_get($cache_key);
-        $total_redirects = $wpdb->get_var("SELECT COUNT(*) FROM {$tableName}");
-        // wp_cache_set($cache_key, $total_redirects);
+        $total_redirects = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}");
         
         // Calculate total pages
         $total_pages = ceil($total_redirects / $per_page);
 
-        // Get redirects for current page
-        // $redirects_key = 'kcgred_get_redirects';
-        // $redirects = wp_cache_get($cache_key);
-        $redirects = $wpdb->get_results(
-            "SELECT * FROM {$tableName} ORDER BY id DESC LIMIT {$per_page} OFFSET {$offset}"
+         // Get redirects for current page
+         $redirects = $wpdb->get_results(
+            "SELECT * FROM {$this->table_name} ORDER BY id DESC LIMIT {$per_page} OFFSET {$offset}"
         );
-        // wp_cache_set($redirects_key, $redirects);
+        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
 		?>
         <div class="wrap kcgred-redirect-manager">
-            <h1><span class="dashicons dashicons-randomize"></span> Redirect Manager</h1>
-            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
+            <h1>Redirect Manager</h1>
+            <?php echo wp_kses_post($navigation_list); ?>
             
             <!-- Add New Redirect Form -->
             <div class="kcgred-redirects-form-wrapper">
@@ -299,10 +305,9 @@ if ( ! defined( 'WPINC' ) ) {
                 </div>
                 <div class="kcgred-premium-notice-wrapper">
                     <div class="kcgred-redirects-content">
-                        <p>Unlock advanced features with Redirects Managers Pro — manage bulk redirects, monitor 404s in real time, and boost your SEO performance.</p>
-                        <p>Upgrade now to take full control of your site’s redirections.</p>
+                        <p>Upgrade to Redirects Manager Pro and take full control of your site’s redirects. Manage 302 and 307 redirects, delete in bulk, and track 404 errors in real time — all from one powerful dashboard.</p>
                         <div class="kcgred-button-wrapper">
-                            <a href="#" class="button">Buy Now</a>
+                            <a href="#" class="button">Buy Pro Version</a>
                         </div>
                     </div>
                 </div>
@@ -317,11 +322,22 @@ if ( ! defined( 'WPINC' ) ) {
                         <p>No redirects found. Add your first redirect above!</p>
                     </div>
                 <?php else: ?>
+                    <div class="alignleft actions bulkactions" style="margin-bottom: 10px;">
+                        <form method="get">
+                            <label for="bulk-action-selector-top">Select bulk action <code style="color: #d63638;">Pro</code></label><br/>
+                            <select name="action" id="bulk-action-selector-top" disabled>
+                                <option value="-1">Bulk actions</option>
+                                <option value="trash">Move to Trash</option>
+                            </select>
+                            <input type="submit" name="bulk_action" id="doaction" class="button action" value="Apply" disabled>
+                        </form>
+                    </div>
                     <table class="wp-list-table widefat fixed striped">
                         <thead>
                             <tr>
+                                <th width="2%" style="padding: 0 2px;"><input type="checkbox" id="select_all" disabled></th>
                                 <th width="5%">ID</th>
-                                <th width="30%">Redirect From</th>
+                                <th width="28%">Redirect From</th>
                                 <th width="30%">Redirect To</th>
                                 <th width="10%">Type</th>
                                 <th width="10%">Hits</th>
@@ -332,25 +348,26 @@ if ( ! defined( 'WPINC' ) ) {
                         <tbody id="redirects-list">
                             <?php foreach ($redirects as $redirect): ?>
                                 <tr data-id="<?php echo esc_attr($redirect->id); ?>" class="<?php echo ($redirect->status == 1) ? 'active' : 'inactive'; ?>">
-                                    <td><?php echo esc_html($redirect->id); ?></td>
-                                    <td>
+                                    <td><input type="checkbox" name="redirect_ids[]" value="<?php echo esc_attr($redirect->id); ?>" disabled></td>
+                                    <td data-colname="ID"><?php echo esc_html($redirect->id); ?></td>
+                                    <td data-colname="Redirect From">
                                         <code><?php echo esc_html($redirect->redirect_from); ?></code>
                                         <?php if (strpos($redirect->redirect_from, '*') !== false): ?>
                                             <span class="wildcard-badge">Wildcard</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td data-colname="Redirect To">
                                         <code><?php echo esc_html($redirect->redirect_to); ?></code>
                                     </td>
-                                    <td>
+                                    <td data-colname="Type">
                                         <span class="redirect-type type-<?php echo esc_attr($redirect->redirect_type); ?>">
                                             <?php echo esc_html($redirect->redirect_type); ?>
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-colname="Hits">
                                         <span class="hits-count"><?php echo number_format($redirect->hits); ?></span>
                                     </td>
-                                    <td>
+                                    <td data-colname="Status">
                                         <label class="switch">
                                             <input type="checkbox" 
                                                    class="toggle-status" 
@@ -359,7 +376,7 @@ if ( ! defined( 'WPINC' ) ) {
                                             <span class="slider"></span>
                                         </label>
                                     </td>
-                                    <td>
+                                    <td data-colname="Actions">
                                         <button class="button button-small edit-redirect" data-id="<?php echo esc_attr($redirect->id); ?>">
                                             <span class="dashicons dashicons-edit"></span> Edit
                                         </button>
@@ -575,11 +592,12 @@ if ( ! defined( 'WPINC' ) ) {
         $total_redirects = count($redirects);
         $active_redirects = count(array_filter($redirects, function($r) { return $r->status == 1; }));
         $total_hits = array_sum(array_column($redirects, 'hits'));
+        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
         ?>
         <div class="wrap kcgred-redirect-manager">
-            <h1><span class="dashicons dashicons-chart-area"></span> Reports</h1>
+            <h1>Reports</h1>
 
-            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
+            <?php echo wp_kses_post($navigation_list); ?>
 
             <!-- Statistics -->
             <div class="redirect-stats">
@@ -596,10 +614,38 @@ if ( ! defined( 'WPINC' ) ) {
                     <div class="stat-label">Total Hits</div>
                 </div>
             </div>
+
+
+            <!-- Statistics Chart -->
+            <div class="kcgred-redirects-chart-wrapper">
+                <div class="kcgred-redirects-chart-canvas">
+                    <canvas id="kcgred-redirects-chart" style="max-width: 600px; height: 600px;"></canvas>
+                </div>
+            </div>
         </div>
         <?php
     }
 
+
+
+    /**
+     * Redirects Managerion redirect 404 logs page callback function
+     *
+     * @since      1.0.1
+     */
+    public function kcgred_error_logs_callback_function(){
+        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
+        ?>
+        <div class="wrap kcgred-redirect-manager">
+            <h1>404 Logs</h1>
+
+            <?php echo wp_kses_post($navigation_list); ?>
+            <div class="kcgred-tab-section-wrapper">
+                this is a pro feature.
+            </div>
+        </div>
+        <?php
+    }
 
 
 
@@ -609,11 +655,12 @@ if ( ! defined( 'WPINC' ) ) {
      * @since      1.0.1
 	 */
     public function kcgred_support_callback_function(){
+        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
         ?>
         <div class="wrap kcgred-redirect-manager">
-            <h1><span class="dashicons dashicons-microphone"></span> Support</h1>
+            <h1>Support</h1>
 
-            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
+            <?php echo wp_kses_post($navigation_list); ?>
             <div class="kcgred-tab-section-wrapper">
                 This feature is coming soon!
             </div>
@@ -627,11 +674,12 @@ if ( ! defined( 'WPINC' ) ) {
      * @since      1.0.1
 	 */
     public function kcgred_import_export_callback_function(){
+        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
         ?>
         <div class="wrap kcgred-redirect-manager">
-            <h1><span class="dashicons dashicons-plugins-checked"></span> Import / Export</h1>
+            <h1>Import / Export</h1>
             
-            <?php echo wp_kses_post($this->kcgred_navigation_tab()); ?>
+            <?php echo wp_kses_post($navigation_list); ?>
             
             <!-- Import/Export -->
             <div class="redirect-tools">
@@ -725,9 +773,6 @@ if ( ! defined( 'WPINC' ) ) {
 				'message'  	=> 'Redirect created successfully',
 			);
         }
-
-        // wp_cache_delete( 'kcgred_get_total' );
-        // wp_cache_delete( 'kcgred_get_redirects' );
 
 		wp_send_json($args);
 		wp_die();
@@ -897,12 +942,16 @@ if ( ! defined( 'WPINC' ) ) {
         $redirects = $wpdb->get_results("SELECT * FROM {$this->table_name}", ARRAY_A);
         
         header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="redirects-' . date('Y-m-d') . '.csv"');
+        header('Content-Disposition: attachment; filename="redirects-' . current_time('mysql') . '.csv"');
         
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fopen
         $output = fopen('php://output', 'w');
+        
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fputcsv
         fputcsv($output, ['redirect_from', 'redirect_to', 'redirect_type', 'status', 'hits']);
         
         foreach ($redirects as $redirect) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fputcsv
             fputcsv($output, [
                 $redirect['redirect_from'],
                 $redirect['redirect_to'],
@@ -912,6 +961,8 @@ if ( ! defined( 'WPINC' ) ) {
             ]);
         }
         
+        // This is the line that was flagged. We ignore it as it's a valid exception.
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fclose
         fclose($output);
         exit;
     }
@@ -932,9 +983,18 @@ if ( ! defined( 'WPINC' ) ) {
         if (!isset($_FILES['csv_file'])) {
             wp_send_json_error('No file uploaded');
         }
+
+        // global $wp_filesystem;
+
+        // // 1. Initialize the Filesystem
+        // if ( ! $wp_filesystem ) {
+        //     require_once ( ABSPATH . 'wp-admin/includes/file.php' );
+        //     WP_Filesystem();
+        // }
+
         
-        $file = $_FILES['csv_file']['tmp_name'];
-        $handle = fopen($file, 'r');
+        $file = isset($_FILES['csv_file']['tmp_name']) ? sanitize_text_field( $_FILES['csv_file']['tmp_name'] ) : '';
+        $handle = !empty($file) ? fopen($file, 'r') : '';
         
         if (!$handle) {
             wp_send_json_error('Could not read file');
@@ -966,6 +1026,7 @@ if ( ! defined( 'WPINC' ) ) {
         fclose($handle);
         
         wp_send_json_success("Imported $imported redirects");
+        exit;
     }
 
     
@@ -983,7 +1044,8 @@ if ( ! defined( 'WPINC' ) ) {
         }
 
         global $wpdb;
-		$hits = $wpdb->get_var( $wpdb->prepare("SELECT SUM(hits) FROM $this->table_name") );
+        $table_name = esc_sql( $this->table_name );
+		$hits = $wpdb->get_var( "SELECT SUM(hits) FROM {$table_name}" );
 
         $args = array(
             'status'	=> true,

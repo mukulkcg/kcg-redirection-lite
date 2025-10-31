@@ -53,9 +53,9 @@ if ( ! defined( 'KCGRED_PATH' ) ) {
  */
 if (!function_exists('kcgred_plugin_load_textdomain')) {
   function kcgred_plugin_load_textdomain() {
-    load_plugin_textdomain( 'kcgred', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+    load_plugin_textdomain( 'redirects-manager', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
   }
-  add_action( 'plugins_loaded', 'kcgred_plugin_load_textdomain' );
+  add_action( 'init', 'kcgred_plugin_load_textdomain' );
 }
 
 
