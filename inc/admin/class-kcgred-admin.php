@@ -236,10 +236,11 @@ if ( ! defined( 'WPINC' ) ) {
         // Calculate total pages
         $total_pages = ceil($total_redirects / $per_page);
 
-         // Get redirects for current page
-         $redirects = $wpdb->get_results(
+        // Get redirects for current page
+        $redirects = $wpdb->get_results(
             "SELECT * FROM {$this->table_name} ORDER BY id DESC LIMIT {$per_page} OFFSET {$offset}"
         );
+
         $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
 		?>
         <div class="wrap kcgred-redirect-manager">
@@ -369,10 +370,7 @@ if ( ! defined( 'WPINC' ) ) {
                                     </td>
                                     <td data-colname="Status">
                                         <label class="switch">
-                                            <input type="checkbox" 
-                                                   class="toggle-status" 
-                                                   data-id="<?php echo esc_attr($redirect->id); ?>"
-                                                   <?php checked($redirect->status, 1); ?>>
+                                            <input type="checkbox" class="toggle-status" data-id="<?php echo esc_attr($redirect->id); ?>" <?php checked($redirect->status, 1); ?>>
                                             <span class="slider"></span>
                                         </label>
                                     </td>
@@ -619,7 +617,7 @@ if ( ! defined( 'WPINC' ) ) {
             <!-- Statistics Chart -->
             <div class="kcgred-redirects-chart-wrapper">
                 <div class="kcgred-redirects-chart-canvas">
-                    <canvas id="kcgred-redirects-chart" style="max-width: 600px; height: 600px;"></canvas>
+                    <canvas id="kcgred-redirects-chart" style="max-width: 600px; height: 600px;" data-reports="<?php echo esc_html($total_redirects.', '.$active_redirects.', ').number_format($total_hits); ?>"></canvas>
                 </div>
             </div>
         </div>
@@ -779,6 +777,13 @@ if ( ! defined( 'WPINC' ) ) {
     }
 
 
+    
+
+    /**
+     * Redirects Managerion redirect status exists or not
+     *
+     * @since      1.0.1
+     */
 	public function kcgred_check_redirect_status( $url ){
         global $wpdb;
 		$status = $wpdb->query( $wpdb->prepare("SELECT * FROM $this->table_name WHERE redirect_from = %s", $url) );

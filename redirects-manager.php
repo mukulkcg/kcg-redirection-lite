@@ -48,15 +48,6 @@ if ( ! defined( 'KCGRED_PATH' ) ) {
     define( 'KCGRED_PATH', plugin_basename( __FILE__ ) );
 }
 
-/**
- * The code that runs during plugin activation.
- */
-if (!function_exists('kcgred_plugin_load_textdomain')) {
-  function kcgred_plugin_load_textdomain() {
-    load_plugin_textdomain( 'redirects-manager', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-  }
-  add_action( 'init', 'kcgred_plugin_load_textdomain' );
-}
 
 
 
