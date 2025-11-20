@@ -2,7 +2,7 @@
 /**
  * Fired during plugin core functions
  *
- * @link       https://kingscrestglobal.com/
+ * @link       https://kingscrestglobal.com/inc/admin/
  * @since      1.0.1
  * @package    redirects-manager
  * @subpackage redirects-manager/inc
@@ -15,7 +15,7 @@
  *
  * @since      1.0.1
  * @package    redirects-manager
- * @subpackage redirects-manager/inc
+ * @subpackage redirects-manager/inc/admin/
  * @author    Kings Crest Global <info@kingscrestglobal.com>
  */
 
@@ -27,6 +27,9 @@ if ( ! defined( 'WPINC' ) ) {
  class kcgred_admin{
 
 	private $table_name;
+	private $table_name_logs;
+
+    private $cache_group = 'redirects_manager_redirects';
 
 	/**
 	 * The ID of this plugin.
@@ -57,6 +60,7 @@ if ( ! defined( 'WPINC' ) ) {
 
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'kcgred_redirects';
+        $this->table_name_logs = $wpdb->prefix . 'kcgred_redirects_logs';
 
 		$this->plugin_name = $plugin_name;
 		$this->plugin_version = $plugin_version;
@@ -66,10 +70,8 @@ if ( ! defined( 'WPINC' ) ) {
 	}
 
 
-
-
 	/**
-	 * Create table for Redirects Manager
+	 * Create table for Redirects Manager Pro
 	 *
      * @since      1.0.1
 	 */
@@ -90,10 +92,20 @@ if ( ! defined( 'WPINC' ) ) {
             PRIMARY KEY (id),
             KEY redirect_from (redirect_from(191))
         ) $charset_collate;";
+
+        $sql_logs = "CREATE TABLE IF NOT EXISTS {$this->table_name_logs} (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            url TEXT NOT NULL,
+            user_agent TEXT NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+        dbDelta($sql_logs);
     }
+
 
 	/**
 	 * Register the stylesheets for the admin area.
@@ -112,12 +124,12 @@ if ( ! defined( 'WPINC' ) ) {
 		// Localize the script with new data
 	    $siteurl = array(
 	        'ajax_url' 	=> admin_url('admin-ajax.php'),
-			'nonce' => wp_create_nonce('ajax-nonce')
+			'nonce'     => wp_create_nonce('kcgred_ajax_nonce_action')
 	    );
-
 
 	    wp_localize_script( $this->plugin_name, 'object_kcgred', $siteurl );
     }
+
 
 
 
@@ -136,54 +148,28 @@ if ( ! defined( 'WPINC' ) ) {
             KCGRED_URL . 'assets/img/128x128.png',
         );
 
-        add_submenu_page( 
-            'redirects-manager', 
-            'Reports', 
-            'Reports', 
-            'manage_options', 
-            'redirects-manager-reports', 
-            [$this, 'kcgred_reports_callback_function'], 
-        );
-
-        add_submenu_page( 
-            'redirects-manager', 
-            '404 Logs', 
-            '404 Logs', 
-            'manage_options', 
-            'redirects-manager-error-logs', 
-            [$this, 'kcgred_error_logs_callback_function'], 
-        );
-
-        add_submenu_page( 
-            'redirects-manager', 
-            'Support', 
-            'Support', 
-            'manage_options', 
-            'redirects-manager-support', 
-            [$this, 'kcgred_support_callback_function'], 
-        );
-
-        add_submenu_page( 
-            'redirects-manager', 
-            'Import / Export', 
-            'Import / Export', 
-            'manage_options', 
-            'redirects-manager-import-export', 
-            [$this, 'kcgred_import_export_callback_function'], 
-        );
 	}
 
 
 
 
+
+
 	/**
-	 * Add Redirects Managerion navigation tab 
+	 * Redirects Manager Pro navigation Callback
 	 *
      * @since      1.0.1
 	 */
-    public function kcgred_navigation_tab() {
-		$redirect_link = admin_url( 'admin.php?page=' );
-        $current_page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : 'redirects-manager';
+	public function kcg_redirect_admin_page(){
+        $nonce = wp_create_nonce('kcgred_tab_nonce');
+            
+        // Verify nonce
+        if(isset($_GET['tab'])){
+            if (!isset($_GET['_wpnonce']) && !wp_verify_nonce(sanitize_key($_GET['_wpnonce']), 'kcgred_tab_nonce')) {
+                echo '<div class="notice notice-error"><p>Security check failed.</p></div>';
+                return;
+            }
+        }
 
         $nav = array(
             'redirects-manager'                 => 'Settings', 
@@ -193,270 +179,60 @@ if ( ! defined( 'WPINC' ) ) {
             'redirects-manager-support'         => 'Support', 
         );
 
-        $output = '';
-        $output .= '<div class="kcgred-navigation-wrapper">';
-            $output .= '<ul>';
+        $navigation = '';
+
+        $menu_page = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'redirects-manager';
+
+        $navigation .= '<div class="kcgred-navigation-wrapper">';
+            $navigation .= '<ul>';
                 foreach($nav as $key => $menu) {
-                    $active = ($current_page == $key) ? 'active' : '';
-                    $output .= '<li><a class="'.esc_html($active).'" href="'.esc_url($redirect_link . $key).'">'.esc_html($menu).'</a></li>';
+                    $active = ($menu_page == $key) ? 'active' : '';
+                    $navigation .= '<li><a class="'.esc_html($active).'" href="'.esc_url(add_query_arg( array( 'page' => 'redirects-manager', 'tab' => $key, '_wpnonce' => $nonce ), admin_url( 'admin.php' ) )).'">'.esc_html($menu).'</a></li>';
                 }
-            $output .= '</ul>';
-        $output .= '</div>';
-
-        return $output;
-    }
-
-
-
-	/**
-	 * Redirects Managerion navigation Callback
-	 *
-     * @since      1.0.1
-	 */
-	public function kcg_redirect_admin_page(){
-		global $wpdb;
-
-        // Get pagination parameters
-        $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        
-        // Get per page from URL or use default
-        if (isset($_GET['per_page'])) {
-            $per_page = max(1, intval($_GET['per_page']));
-        } else {
-            $per_page = get_option( 'posts_per_page' );
-        }
-
-        
-        // Calculate offset
-        $offset = ($current_page - 1) * $per_page;
-        
-        // Get total count
-        $total_redirects = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}");
-        
-        // Calculate total pages
-        $total_pages = ceil($total_redirects / $per_page);
-
-        // Get redirects for current page
-        $redirects = $wpdb->get_results(
-            "SELECT * FROM {$this->table_name} ORDER BY id DESC LIMIT {$per_page} OFFSET {$offset}"
-        );
-
-        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
+            $navigation .= '</ul>';
+        $navigation .= '</div>';
 		?>
         <div class="wrap kcgred-redirect-manager">
-            <h1>Redirect Manager</h1>
-            <?php echo wp_kses_post($navigation_list); ?>
-            
-            <!-- Add New Redirect Form -->
-            <div class="kcgred-redirects-form-wrapper">
-                <div class="redirect-form-container">
-                    <h2>Add New Redirect</h2>
-                    <form id="add-redirect-form">
-                        <div class="kcgred-form-wrapper">
-                            <div class="kcgred-field">
-                                <label for="redirect_from">Redirect From</label>
-                                <div class="kcgred-input">
-                                    <input type="text" id="redirect_from" name="redirect_from" class="regular-text" placeholder="<?php echo esc_url(get_site_url('', 'old-page')); ?>" required>
-                                    <p class="description">
-                                        Enter the old URL <br>
-                                        Example: <code><?php echo esc_url(get_site_url('', 'old-page')); ?></code>
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div class="kcgred-field">
-                                <label for="redirect_to">Redirect To</label>
-                                <div class="kcgred-input">
-                                    <input type="text" id="redirect_to"  name="redirect_to" class="regular-text" placeholder="<?php echo esc_url(get_site_url('', 'new-page')); ?> or https://example.com" required>
-                                    <p class="description">Enter the new URL<br> Can be internal (<code><?php echo esc_url(get_site_url('', 'new-page')); ?></code>)<br> or external (<code>https://example.com</code>)</p>
-                                </div>
-                            </div>
-                            
-                            <div class="kcgred-field">
-                                <label for="redirect_type">Redirect Type</label>
-                                <div class="kcgred-input">
-                                    <select id="redirect_type" name="redirect_type">
-                                        <option value="301">301 - Permanent</option>
-                                        <option disabled>302 - Temporary</option>
-                                        <option disabled>307 - Temporary (Preserve Method)</option>
-                                    </select>
-                                    <p class="description">
-                                        <strong>301:</strong> Permanent redirect (SEO-friendly)<br>
-                                        <strong>302:</strong> Temporary redirect <code style="color: #d63638;">Pro</code><br>
-                                        <strong>307:</strong> Temporary redirect (preserves POST data) <code style="color: #d63638;">Pro</code>
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <!-- <div class="kcgred-field">
-                                <label for="redirect_status">Status</label>
-                                <div class="kcgred-input">
-                                    <input type="checkbox" id="redirect_status" name="redirect_status" value="1" checked> Active
-                                </div>
-                            </div> -->
-                        
-                            <div class="kcgred-field">
-                                <label></label>
-                                <p class="submit">
-                                    <button type="submit" class="button button-primary button-large"> <span class="dashicons dashicons-plus-alt"></span> Add Redirect</button>
-                                </p>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="kcgred-premium-notice-wrapper">
-                    <div class="kcgred-redirects-content">
-                        <p>Upgrade to Redirects Manager Pro and take full control of your site’s redirects. Manage 302 and 307 redirects, delete in bulk, and track 404 errors in real time — all from one powerful dashboard.</p>
-                        <div class="kcgred-button-wrapper">
-                            <a href="#" class="button">Buy Pro Version</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Redirects List -->
-            <div class="redirect-list-container">
-                <h2>All Redirects (<?php echo esc_html($total_redirects); ?>)</h2>
-                
-                <?php if (empty($redirects)): ?>
-                    <div class="no-redirects">
-                        <p>No redirects found. Add your first redirect above!</p>
-                    </div>
-                <?php else: ?>
-                    <div class="alignleft actions bulkactions" style="margin-bottom: 10px;">
-                        <form method="get">
-                            <label for="bulk-action-selector-top">Select bulk action <code style="color: #d63638;">Pro</code></label><br/>
-                            <select name="action" id="bulk-action-selector-top" disabled>
-                                <option value="-1">Bulk actions</option>
-                                <option value="trash">Move to Trash</option>
-                            </select>
-                            <input type="submit" name="bulk_action" id="doaction" class="button action" value="Apply" disabled>
-                        </form>
-                    </div>
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
-                            <tr>
-                                <th width="2%" style="padding: 0 2px;"><input type="checkbox" id="select_all" disabled></th>
-                                <th width="5%">ID</th>
-                                <th width="28%">Redirect From</th>
-                                <th width="30%">Redirect To</th>
-                                <th width="10%">Type</th>
-                                <th width="10%">Hits</th>
-                                <th width="10%">Status</th>
-                                <th width="15%">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="redirects-list">
-                            <?php foreach ($redirects as $redirect): ?>
-                                <tr data-id="<?php echo esc_attr($redirect->id); ?>" class="<?php echo ($redirect->status == 1) ? 'active' : 'inactive'; ?>">
-                                    <td><input type="checkbox" name="redirect_ids[]" value="<?php echo esc_attr($redirect->id); ?>" disabled></td>
-                                    <td data-colname="ID"><?php echo esc_html($redirect->id); ?></td>
-                                    <td data-colname="Redirect From">
-                                        <code><?php echo esc_html($redirect->redirect_from); ?></code>
-                                        <?php if (strpos($redirect->redirect_from, '*') !== false): ?>
-                                            <span class="wildcard-badge">Wildcard</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td data-colname="Redirect To">
-                                        <code><?php echo esc_html($redirect->redirect_to); ?></code>
-                                    </td>
-                                    <td data-colname="Type">
-                                        <span class="redirect-type type-<?php echo esc_attr($redirect->redirect_type); ?>">
-                                            <?php echo esc_html($redirect->redirect_type); ?>
-                                        </span>
-                                    </td>
-                                    <td data-colname="Hits">
-                                        <span class="hits-count"><?php echo number_format($redirect->hits); ?></span>
-                                    </td>
-                                    <td data-colname="Status">
-                                        <label class="switch">
-                                            <input type="checkbox" class="toggle-status" data-id="<?php echo esc_attr($redirect->id); ?>" <?php checked($redirect->status, 1); ?>>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </td>
-                                    <td data-colname="Actions">
-                                        <button class="button button-small edit-redirect" data-id="<?php echo esc_attr($redirect->id); ?>">
-                                            <span class="dashicons dashicons-edit"></span> Edit
-                                        </button>
-                                        <button class="button button-small button-link-delete delete-redirect" data-id="<?php echo esc_attr($redirect->id); ?>">
-                                            <span class="dashicons dashicons-trash"></span> Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+            <h1><?php echo esc_html($nav[$menu_page]); ?></h1>
+            <?php 
+            // Navigation
+            echo wp_kses_post($navigation);
 
-                    <!-- Pagination -->
-                    <?php if ($total_pages > 1): ?>
-                    <div class="tablenav bottom">
-                        <div class="tablenav-pages">
-                            <span class="displaying-num">
-                                <?php 
-                                $start = $offset + 1;
-                                $end = min($offset + $per_page, $total_pages);
-                                printf('%d-%d of %d items', esc_html($start), esc_html($end), esc_html($total_pages));
-                                ?>
-                            </span>
-                            <span class="pagination-links">
-                                <?php echo wp_kses_post($this->kcgred_get_pagination_links(esc_html($current_page), esc_html($total_pages))); ?>
-                            </span>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
             
-            <!-- Edit Modal -->
-            <div id="edit-modal" class="redirect-modal" style="display:none;">
-                <div class="modal-content">
-                    <span class="close-modal">&times;</span>
-                    <h2>Edit Redirect</h2>
-                    <form id="edit-redirect-form">
-                        <input type="hidden" id="edit_id" name="id">
-                        
-                        <table class="form-table">
-                            <tr>
-                                <th><label for="edit_redirect_from">Redirect From</label></th>
-                                <td>
-                                    <input type="text" id="edit_redirect_from" name="redirect_from" class="regular-text" required>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th><label for="edit_redirect_to">Redirect To</label></th>
-                                <td>
-                                    <input type="text" id="edit_redirect_to" name="redirect_to" class="regular-text" required>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th><label for="edit_redirect_type">Redirect Type</label></th>
-                                <td>
-                                    <select id="edit_redirect_type" name="redirect_type">
-                                        <option value="301">301 - Permanent</option>
-                                        <option value="302">302 - Temporary</option>
-                                        <option value="307">307 - Temporary (Preserve Method)</option>
-                                    </select>
-                                </td>
-                            </tr>
-                        </table>
-                        
-                        <p class="submit">
-                            <button type="submit" class="button button-primary">Update Redirect</button>
-                            <button type="button" class="button close-modal">Cancel</button>
-                        </p>
-                    </form>
-                </div>
-            </div>
+
+            switch($menu_page) {
+
+                case 'redirects-manager-reports';
+                    $redirect_reports = new kcgred_redirect_reports( $this->plugin_name, $this->plugin_version );
+                    $redirect_reports->kcgred_redirect_reports_settings();
+                    break;
+                case 'redirects-manager-error-logs';
+                    $redirect_logs = new kcgred_error_logs( $this->plugin_name, $this->plugin_version );
+                    $redirect_logs->kcgred_error_logs_callback_function();
+                    break;
+                case 'redirects-manager-import-export';
+                    $imports = new kcgred_redirect_import_export( $this->plugin_name, $this->plugin_version );
+                    $imports->kcgred_import_export_callback_function();
+                    break;
+                case 'redirects-manager-support';
+                    $supports = new kcgred_redirect_supports( $this->plugin_name, $this->plugin_version );
+                    $supports->kcgred_support_callback_function();
+                    break;
+                default:
+                    $redirect_settings = new kcgred_redirect_settings( $this->plugin_name, $this->plugin_version );
+                    $redirect_settings->kcgred_manager_settings();
+                    break;
+
+            }
+            ?>
         </div>
 		<?php
 	}
 
 
 
-
-
 	/**
-	 * Redirects Managerion add view details button on plugin
+	 * Redirects Manager Pro add view details button on plugin
 	 *
      * @since      1.0.1
 	 */
@@ -464,7 +240,7 @@ if ( ! defined( 'WPINC' ) ) {
         $plugin_host = $this->kcgred_is_plugin_from_wporg($file);
         
         if ( (strpos( $file, 'redirects-manager.php' ) !== false) && ($plugin_host === false) ) {
-            $links[] = '<a href="https://kingscrestglobal.com/redirects-manager" target="_blank">View details</a>';
+            $links[] = '<a href="https://kingscrestglobal.com/kcg-redirects" target="_blank">View details</a>';
         }
 
         return $links;
@@ -475,7 +251,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * Redirects Managerion check plugin from wp.org or custom hosted
+	 * Redirects Manager Pro check plugin from wp.org or custom hosted
 	 *
      * @since      1.0.1
 	 */
@@ -494,23 +270,33 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * Redirects Managerion add pagination link function
+	 * Redirects Manager Pro add pagination link function
 	 *
      * @since      1.0.1
 	 */
-    private function kcgred_get_pagination_links($current_page, $total_pages) {
+    private function kcgred_get_pagination_links( $page, $tab, $current_page, $total_pages ) {
+        $nonce = wp_create_nonce('kcgred_tab_nonce');
+            
+        // Verify nonce
+        if(isset($_GET['tab'])){
+            if (!isset($_GET['_wpnonce']) && !wp_verify_nonce(sanitize_key($_GET['_wpnonce']), 'kcgred_tab_nonce')) {
+                echo '<div class="notice notice-error"><p>Security check failed.</p></div>';
+                return;
+            }
+        }
+
         $links = '';
-        $base_url = admin_url('admin.php?page=redirects-manager&tab=' . $current_page);
+        $base_url = admin_url('admin.php?page='.esc_html($page).'&tab=' . $tab);
         
         // Add per_page parameter if set
         if (isset($_GET['per_page'])) {
             $base_url .= '&per_page=' . intval($_GET['per_page']);
         }
-        
-        // Add search parameter if set
-        if (isset($_GET['s']) && !empty($_GET['s'])) {
-            $base_url .= '&s=' . urlencode($_GET['s']);
+
+        if (isset($nonce)) {
+            $base_url .= '&_wpnonce=' . sanitize_key($nonce);
         }
+
         
         // First page
         if ($current_page > 1) {
@@ -574,133 +360,13 @@ if ( ! defined( 'WPINC' ) ) {
     }
 
 
-
 	/**
-	 * Redirects Managerion redirect reports callback function
+	 * Redirects Manager Pro return pagination
 	 *
      * @since      1.0.1
 	 */
-    public function kcgred_reports_callback_function(){
-		global $wpdb;
-
-        // Get all redirects
-        $redirects = $wpdb->get_results("SELECT * FROM {$this->table_name} ORDER BY id DESC");
-        
-        // Get statistics
-        $total_redirects = count($redirects);
-        $active_redirects = count(array_filter($redirects, function($r) { return $r->status == 1; }));
-        $total_hits = array_sum(array_column($redirects, 'hits'));
-        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
-        ?>
-        <div class="wrap kcgred-redirect-manager">
-            <h1>Reports</h1>
-
-            <?php echo wp_kses_post($navigation_list); ?>
-
-            <!-- Statistics -->
-            <div class="redirect-stats">
-                <div class="stat-box">
-                    <div class="stat-number"><?php echo esc_html($total_redirects); ?></div>
-                    <div class="stat-label">Total Redirects</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-number"><?php echo esc_html($active_redirects); ?></div>
-                    <div class="stat-label">Active</div>
-                </div>
-                <div class="stat-box hits-count">
-                    <div class="stat-number"><?php echo number_format($total_hits); ?></div>
-                    <div class="stat-label">Total Hits</div>
-                </div>
-            </div>
-
-
-            <!-- Statistics Chart -->
-            <div class="kcgred-redirects-chart-wrapper">
-                <div class="kcgred-redirects-chart-canvas">
-                    <canvas id="kcgred-redirects-chart" style="max-width: 600px; height: 600px;" data-reports="<?php echo esc_html($total_redirects.', '.$active_redirects.', ').number_format($total_hits); ?>"></canvas>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-
-
-    /**
-     * Redirects Managerion redirect 404 logs page callback function
-     *
-     * @since      1.0.1
-     */
-    public function kcgred_error_logs_callback_function(){
-        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
-        ?>
-        <div class="wrap kcgred-redirect-manager">
-            <h1>404 Logs</h1>
-
-            <?php echo wp_kses_post($navigation_list); ?>
-            <div class="kcgred-tab-section-wrapper">
-                this is a pro feature.
-            </div>
-        </div>
-        <?php
-    }
-
-
-
-	/**
-	 * Redirects Managerion redirect support page callback function
-	 *
-     * @since      1.0.1
-	 */
-    public function kcgred_support_callback_function(){
-        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
-        ?>
-        <div class="wrap kcgred-redirect-manager">
-            <h1>Support</h1>
-
-            <?php echo wp_kses_post($navigation_list); ?>
-            <div class="kcgred-tab-section-wrapper">
-                This feature is coming soon!
-            </div>
-        </div>
-        <?php
-    }
-
-	/**
-	 * Redirects Managerion redirect Import / Export callback function
-	 *
-     * @since      1.0.1
-	 */
-    public function kcgred_import_export_callback_function(){
-        $navigation_list = !empty($this->kcgred_navigation_tab()) ? $this->kcgred_navigation_tab() : '';
-        ?>
-        <div class="wrap kcgred-redirect-manager">
-            <h1>Import / Export</h1>
-            
-            <?php echo wp_kses_post($navigation_list); ?>
-            
-            <!-- Import/Export -->
-            <div class="redirect-tools">
-                <h2>Import/Export</h2>
-                <div class="tool-buttons">
-                    <button type="button" class="button" id="import-btn">
-                        <span class="dashicons dashicons-upload"></span> Import CSV
-                    </button>
-                    <button type="button" class="button" id="export-btn">
-                        <span class="dashicons dashicons-download"></span> Export CSV
-                    </button>
-                </div>
-                
-                <div id="import-form" style="display:none; margin-top:20px;">
-                    <form id="csv-import-form" enctype="multipart/form-data">
-                        <input type="file" name="csv_file" id="csv_file" accept=".csv">
-                        <button type="submit" class="button">Upload</button>
-                        <p class="description">CSV format: redirect_from,redirect_to,redirect_type</p>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <?php
+    public function kcgred_get_paginations( $page, $tab, $current_page, $total_pages ) {
+        return $this->kcgred_get_pagination_links( $page, $tab, $current_page, $total_pages );
     }
 
 
@@ -708,356 +374,50 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 	/**
-	 * Redirects Managerion save redirect data
+	 * Redirects Manager Pro redirect status exists or not
 	 *
      * @since      1.0.1
 	 */
-	public function kcgred_save_redirect() {
-		// Check for nonce security      
-        check_ajax_referer('ajax-nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
-        }
-        
-        global $wpdb;
-        $data = isset($_REQUEST['form-data']) ? $_REQUEST['form-data'] : '';
-        $id = isset($data['id']) ? intval($data['id']) : 0;
-        $redirect_from = isset($data['redirect_from']) ? sanitize_text_field($data['redirect_from']) : '';
-        $redirect_to = isset($data['redirect_to']) ? sanitize_text_field($data['redirect_to']) : '';
-        $redirect_type = isset($data['redirect_type']) ? sanitize_text_field($data['redirect_type']) : '';
-        $status = isset($data['status']) ? sanitize_text_field($data['status']) : '';
-
-        if($id > 0) {
-            $status = 1;
-        }
-        
-
-		$entry_status = $this->kcgred_check_redirect_status($redirect_from);
-		
-		if( ($entry_status == 1) && ($id == 0) ) {
-			$args = array(
-				'status'	=> false,
-				'message'  	=> $redirect_from . ' already added',
-			);
-
-			wp_send_json($args);
-			wp_die();
-		}
-        
-        $data = [
-            'redirect_from' => $redirect_from,
-            'redirect_to' => $redirect_to,
-            'redirect_type' => $redirect_type,
-            'status' => $status
-        ];
-        
-        if ($id > 0) {
-            // Update existing
-            $post_id = $wpdb->update($this->table_name, $data, ['id' => $id]);
-
-			$args = array(
-				'status'	=> true,
-				'id'		=> $post_id,
-				'message'  	=> 'Redirect updated successfully',
-			);
-        } else {
-            // Insert new
-            $post_id = $wpdb->insert($this->table_name, $data);
-			
-			$args = array(
-				'status'	=> true,
-				'id'		=> $post_id,
-				'message'  	=> 'Redirect created successfully',
-			);
-        }
-
-		wp_send_json($args);
-		wp_die();
-    }
-
-
-    
-
-    /**
-     * Redirects Managerion redirect status exists or not
-     *
-     * @since      1.0.1
-     */
 	public function kcgred_check_redirect_status( $url ){
         global $wpdb;
-		$status = $wpdb->query( $wpdb->prepare("SELECT * FROM $this->table_name WHERE redirect_from = %s", $url) );
+
+        $cache_key = 'redirect_from_' . md5( $sanitized_url );
+        $status = wp_cache_get( $cache_key, $this->cache_group );
+
+        if ( false === $status ) {
+            // Data not found in cache, perform database query
+
+            // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery -- Querying a custom plugin table where no higher-level API exists.
+            // phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching -- Caching logic is implemented above this query.
+            $status = $wpdb->query( 
+                $wpdb->prepare(
+                    "SELECT * FROM %i WHERE redirect_from = %s", 
+                    $this->table_name,
+                    $url
+                )
+            );
+            // phpcs:enable WordPress.DB.DirectDatabaseQuery.NoCaching
+            // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+            // 4. Store the result in cache
+            // Cache for a reasonable amount of time, e.g., 1 hour (3600 seconds).
+            // Adjust the duration based on how often your redirects might change.
+            wp_cache_set( $cache_key, $status, $this->cache_group, 3600 );
+        }
 
 		return $status;
 	}
-    
-
-	/**
-	 * Redirects Managerion delete redirect data
-	 *
-     * @since      1.0.1
-	 */
-    public function kcgred_delete_redirect() {
-		// Check for nonce security      
-        check_ajax_referer('ajax-nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
-        }
-        
-        global $wpdb;
-        
-        $id = isset($_REQUEST['id']) ? intval($_REQUEST['id']) : '';
-        $wpdb->delete($this->table_name, ['id' => $id]);
-        
-		$args = array(
-			'status'	=> true,
-			'message'  	=> 'Redirect deleted successfully',
-		);
-
-		wp_send_json($args);
-		wp_die();
-    }
-    
-
-	/**
-	 * Redirects Managerion change redirect status
-	 *
-     * @since      1.0.1
-	 */
-    public function kcgred_toggle_redirect() {
-        check_ajax_referer('ajax-nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
-        }
-        
-        global $wpdb;
-        
-        $id = intval($_REQUEST['id']);
-        $status = intval($_REQUEST['status']);
-        
-        $wpdb->update($this->table_name, ['status' => $status], ['id' => $id]);
-
-		if($status == 1) {
-			$args = array(
-				'status'	=> true,
-				'message'  	=> 'Status updated',
-			);
-		} else {
-			$args = array(
-				'status'	=> false,
-				'message'  	=> 'Status updated',
-			);
-		}
-
-		wp_send_json($args);
-		wp_die();
-    }
-    
-
-	/**
-	 * Redirects Managerion process redirect
-	 *
-     * @since      1.0.1
-	 */
-    public function kcgred_process_redirects() {
-        global $wpdb, $wp;
-        
-        // Get current URL path
-        $current_path = home_url( $wp->request );
-        
-        // Get all active redirects
-        $redirects = $wpdb->get_results("SELECT * FROM {$this->table_name} WHERE status = 1 ORDER BY id ASC");
-
-        
-        foreach ($redirects as $redirect) {
-            $from = rtrim($redirect->redirect_from, '/');
-            $to = $redirect->redirect_to;
-
-            
-            // Check for exact match
-            if ($current_path === $from) {
-                $this->kcgred_do_redirect($redirect->id, $to, $redirect->redirect_type);
-                return;
-            }
-
-            
-            // Check for wildcard match
-            if (strpos($from, '*') !== false) {
-                $pattern = str_replace('*', '(.*)', preg_quote($from, '/'));
-                $pattern = '/^' . $pattern . '$/';
-                
-                if (preg_match($pattern, $current_path, $matches)) {
-                    // Replace wildcards in destination
-                    $final_to = $to;
-                    if (count($matches) > 1) {
-                        for ($i = 1; $i < count($matches); $i++) {
-                            $final_to = str_replace('$' . $i, $matches[$i], $final_to);
-                        }
-                    }
-                    
-                    $this->kcgred_do_redirect($redirect->id, $final_to, $redirect->redirect_type);
-                    return;
-                }
-            }
-        }
-    }
-    
-
-	/**
-	 * Redirects Managerion redirect to the destination
-	 *
-     * @since      1.0.1
-	 */
-    private function kcgred_do_redirect($id, $url, $type = '301') {
-        global $wpdb;
-        
-        // Update hit count
-        $wpdb->query($wpdb->prepare(
-            "UPDATE {$this->table_name} SET hits = hits + 1 WHERE id = %d",
-            $id
-        ));
-        
-        // Ensure absolute URL
-        if (strpos($url, 'http') !== 0) {
-            $url = home_url($url);
-        }
-        
-        // Perform redirect
-        wp_redirect($url, intval($type));
-        exit;
-    }
-    
-
-	/**
-	 * Redirects Managerion export redirects
-	 *
-     * @since      1.0.1
-	 */
-    public function kcgred_export_redirects() {
-        check_ajax_referer('ajax-nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_die('Unauthorized');
-        }
-        
-        global $wpdb;
-        
-        $redirects = $wpdb->get_results("SELECT * FROM {$this->table_name}", ARRAY_A);
-        
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="redirects-' . current_time('mysql') . '.csv"');
-        
-        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fopen
-        $output = fopen('php://output', 'w');
-        
-        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fputcsv
-        fputcsv($output, ['redirect_from', 'redirect_to', 'redirect_type', 'status', 'hits']);
-        
-        foreach ($redirects as $redirect) {
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fputcsv
-            fputcsv($output, [
-                $redirect['redirect_from'],
-                $redirect['redirect_to'],
-                $redirect['redirect_type'],
-                $redirect['status'],
-                $redirect['hits']
-            ]);
-        }
-        
-        // This is the line that was flagged. We ignore it as it's a valid exception.
-        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fclose
-        fclose($output);
-        exit;
-    }
-    
-
-	/**
-	 * Redirects Managerion import redirects
-	 *
-     * @since      1.0.1
-	 */
-    public function kcgred_import_redirects() {
-        check_ajax_referer('ajax-nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
-        }
-        
-        if (!isset($_FILES['csv_file'])) {
-            wp_send_json_error('No file uploaded');
-        }
-
-        // global $wp_filesystem;
-
-        // // 1. Initialize the Filesystem
-        // if ( ! $wp_filesystem ) {
-        //     require_once ( ABSPATH . 'wp-admin/includes/file.php' );
-        //     WP_Filesystem();
-        // }
-
-        
-        $file = isset($_FILES['csv_file']['tmp_name']) ? sanitize_text_field( $_FILES['csv_file']['tmp_name'] ) : '';
-        $handle = !empty($file) ? fopen($file, 'r') : '';
-        
-        if (!$handle) {
-            wp_send_json_error('Could not read file');
-        }
-        
-        global $wpdb;
-        $imported = 0;
-        
-        // Skip header row
-        fgetcsv($handle);
-        
-        while (($data = fgetcsv($handle)) !== false) {
-            if (count($data) >= 3) {
-                
-                $entry_status = $this->kcgred_check_redirect_status( $data[0] );
-                
-                if($entry_status < 1) {
-                    $wpdb->insert($this->table_name, [
-                        'redirect_from' => $data[0],
-                        'redirect_to' => $data[1],
-                        'redirect_type' => $data[2],
-                        'status' => isset($data[3]) ? $data[3] : 1
-                    ]);
-                    $imported++;
-                }
-            }
-        }
-        
-        fclose($handle);
-        
-        wp_send_json_success("Imported $imported redirects");
-        exit;
-    }
 
     
 
+
 	/**
-	 * Redirects Managerion update stats
+	 * Redirects Manager Pro get error logs table
 	 *
      * @since      1.0.1
 	 */
-    public function kcgred_get_redirect_stats() {
-        check_ajax_referer('ajax-nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Unauthorized');
-        }
-
-        global $wpdb;
-        $table_name = esc_sql( $this->table_name );
-		$hits = $wpdb->get_var( "SELECT SUM(hits) FROM {$table_name}" );
-
-        $args = array(
-            'status'	=> true,
-            'total'  	=> $hits,
-        );
-
-		wp_send_json($args);
-		wp_die();
+    public function kcgred_get_table_name_logs() {
+        return $this->table_name_logs;
     }
+
  }

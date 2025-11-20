@@ -25,7 +25,26 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 class kcgred_deactivate_init {
-	public static function kcgred_deactivate() {
-
+	public function __construct() {
+		$this->kcgred_unschedule_cleanup_cron();
 	}
+
+
+	public static function kcgred_deactivate() {
+        
+	}
+
+
+
+	/**
+	 * Redirects Manager Pro Unschedule the cron job when plugin deactivates
+	 *
+     * @since      1.0.1
+	 */
+    public function kcgred_unschedule_cleanup_cron() {
+        $timestamp = wp_next_scheduled('kcgred_cleanup_old_logs');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'kcgred_cleanup_old_logs');
+        }
+    }
 }

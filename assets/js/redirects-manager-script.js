@@ -10,6 +10,7 @@
             var redirect_from = $(this).find('input[name="redirect_from"]').val();
             var redirect_to = $(this).find('input[name="redirect_to"]').val();
             var redirect_type = $(this).find('select[name="redirect_type"]').val();
+            var key = $(this).find('select[name="redirect_type"]').data('key');
 
             // if($(this).find('input[type="checkbox"]').prop('checked') == true){
             //     var status = 1;
@@ -17,7 +18,7 @@
             //     var status = 0;
             // }
 
-            if ( (redirect_type !== '301') ) {
+            if ( (redirect_type !== '301') && (key == '') ) {
                 alert('This is a pro feature');
                 redirect_type = 301;
                 $(this).find('select[name="redirect_type"]').val(301);
@@ -59,6 +60,7 @@
             const row = $(this).closest('tr');
             
             if(id) {
+                console.log(object_kcgred.nonce);
                 $.ajax({
                     type: 'POST',
                     url: object_kcgred.ajax_url,
@@ -68,7 +70,7 @@
                         id: id
                     }
                 }).done(function(response) {
-                    // console.log(response);
+                    console.log(response);
                     if(response['status'] == true) {
                         row.fadeOut(300, function() {
                             $(this).remove();
@@ -115,9 +117,10 @@
             const row = $(this).closest('tr');
             
             // Get current values from the row
-            const redirectFrom = row.find('td:eq(1) code').text();
-            const redirectTo = row.find('td:eq(2) code').text();
+            const redirectFrom = row.find('td.kcgred-redirect-from code').text();
+            const redirectTo = row.find('td.kcgred-redirect-to code').text();
             const redirectType = row.find('.redirect-type').text().trim();
+            // console.log(redirectFrom);
             
             // Populate form
             $('#edit_id').val(id);
@@ -234,6 +237,49 @@
                 console.log(response); 
             });
         }, 30000);
+
+
+        // Select all redirects for bulk actions
+        $('input[name="kcgred_select_all"]').on('change', function() {
+            $('.redirect-list-container input[name="kcgred_redirect_ids[]"]').prop('checked', this.checked);
+        });
+
+        
+        
+        // Bulk actions delete selected redirects
+        $('.bulkactions form').on('submit', function(e) {
+            e.preventDefault();
+            
+            var redData = [];
+            var action = $(this).find('select[name="action"]').val();
+            $('.redirect-list-container input[name="kcgred_redirect_ids[]"]').each(function() {
+                if($(this).prop('checked')) {
+                    redData.push($(this).val());
+                }
+            });
+
+            
+            if(action == 'delete') {
+                $.ajax({
+                    type: 'POST',
+                    url: object_kcgred.ajax_url,
+                    data: {
+                        action: 'kcgred_delete_selected_redirects_init',
+                        nonce: object_kcgred.nonce,
+                        'form-data' : redData,
+                    }
+                }).done(function(response) {
+                    // console.log(response);
+                    if(response['status'] == false) {
+                        alert(response['message']);
+                    } else {
+                        location.reload();
+                    }
+                }).fail(function(response) {
+                    console.log(response); 
+                });
+            }
+        });
 
         
     });

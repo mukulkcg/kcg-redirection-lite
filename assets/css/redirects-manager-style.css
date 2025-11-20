@@ -39,10 +39,10 @@
 }
 .redirect-form-container,
 .redirect-tools,
-.kcgred-tab-section-wrapper,
-.redirect-list-container {
+.redirect-list-container,
+.kcgred-support-wrapper {
     position: relative;
-    background: #fff;
+    background: #ffffff;
     border-radius: 4px;
     padding: 20px;
     border-width: 1px 1px 1px 1px;
@@ -51,6 +51,17 @@
 }
 .redirect-list-container {
     margin-top: 20px;
+}
+.redirect-list-container thead tr th:first-child {
+    padding: 8px 2px;
+    margin: 0;
+}
+.redirect-list-container thead tr th input[type="checkbox"] {
+    margin-left: 0;
+}
+.redirect-list-container table tr td:first-child {
+    padding: 8px 2px;
+    margin: 0;
 }
 .kcgred-form-wrapper {
     display: grid;
@@ -347,4 +358,69 @@ input:checked + .slider:before {
     max-width: 600px; 
     height: 600px;
     margin: 0 auto;
+}
+
+
+/* Pagination style */
+.kcgred-redirect-manager .pagination-links a {
+    border-color: #414141;
+    color: #000000;
+    outline: none;
+}
+.kcgred-redirect-manager .pagination-links .button {
+    margin: 0 2px;
+}
+.kcgred-redirect-manager .pagination-links .current {
+    background-color: #a7a7a7;
+    color: #000000;
+}
+
+
+/* ==================== Support Tab ======================== */
+.kcgred-support-wrapper {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.kcgred-support-item {
+    background: white;
+    border: 1px solid #ddd;
+    flex: 1;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+}
+.kcgred-support-item-img {
+    background-color: #ffc468;
+    text-align: center;
+    line-height: 0;
+    height: 200px;
+    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.kcgred-support-item-img img {
+    max-width: 100px;
+}
+.kcgred-support-item-content {
+    padding: 20px;
+}
+.kcgred-support-item-content h3 {
+    color: #1d2327;
+    font-size: 1.5em;
+    margin-bottom: 1em;
+    margin-top: 0;
+}
+.kcgred-support-item-content p {
+    font-size: 14px;
+    font-weight: 400;
+    margin-bottom: 0;
+}
+.kcgred-support-item-btn {
+    padding: 20px;
+    background-color: #f0f0f1a8;
+    border-top: 1px solid #ddd;
+    margin-top: auto;
 }

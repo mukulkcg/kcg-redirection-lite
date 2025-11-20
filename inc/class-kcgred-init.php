@@ -30,16 +30,24 @@ class kcgred_features_init{
 	protected $plugin_version;
 
 	public function __construct() {
+
 		if ( defined( 'KCGRED_VERSION' ) ) {
 			$this->plugin_version = KCGRED_VERSION;
 		} else {
 			$this->plugin_version = '1.0.1';
 		}
+
 		$this->plugin_name = 'redirects-manager';
 		$this->load_dependencies();
 		$this->define_admin_hooks();
+		$this->define_redirect_manager_settings();
+		$this->define_redirect_logs_settings();
+		$this->define_redirect_import_export_settings();
+
 	}
 
+
+	
 	/**
 	 * Load the required dependencies for this plugin.
 	 *
@@ -67,6 +75,32 @@ class kcgred_features_init{
 		 */
 		require_once KCGRED_DIR . 'inc/admin/class-kcgred-admin.php';
 
+
+		/**
+		 * The class responsible for defining all actions that occur in the redirect manager settings.
+		 */
+		require_once KCGRED_DIR . 'inc/admin/class-redirect-manager-settings.php';
+
+		/**
+		 * The class responsible for defining all actions that occur in the redirect manager reports.
+		 */
+		require_once KCGRED_DIR . 'inc/admin/class-redirects-manager-reports.php';
+
+		/**
+		 * The class responsible for defining all actions that occur in the redirect manager 404 logs.
+		 */
+		require_once KCGRED_DIR . 'inc/admin/class-redirects-manager-error-logs.php';
+
+		/**
+		 * The class responsible for defining all actions that occur in the redirect manager import/export.
+		 */
+		require_once KCGRED_DIR . 'inc/admin/class-redirects-manager-import-export.php';
+
+		/**
+		 * The class responsible for defining all actions that occur in the redirect manager suport.
+		 */
+		require_once KCGRED_DIR . 'inc/admin/class-redirects-manager-support.php';
+
 		$this->loader = new kcgred_loader();
 
 	}
@@ -84,17 +118,67 @@ class kcgred_features_init{
 
          // Admin menu
         $this->loader->add_action( 'admin_menu', $plugin_admin, 'kcgred_add_admin_menu' );
-		$this->loader->add_action( 'wp_ajax_kcgred_save_redirect', $plugin_admin, 'kcgred_save_redirect' );
-		$this->loader->add_action( 'wp_ajax_kcgred_delete_redirect', $plugin_admin, 'kcgred_delete_redirect' );
-		$this->loader->add_action( 'wp_ajax_kcgred_toggle_redirect', $plugin_admin, 'kcgred_toggle_redirect' );
-		$this->loader->add_action( 'template_redirect', $plugin_admin, 'kcgred_process_redirects', 1 );
-		$this->loader->add_action( 'wp_ajax_kcgred_export_redirects', $plugin_admin, 'kcgred_export_redirects' );
-		$this->loader->add_action( 'wp_ajax_kcgred_import_redirects', $plugin_admin, 'kcgred_import_redirects' );
-		$this->loader->add_action( 'wp_ajax_kcgred_get_redirect_stats', $plugin_admin, 'kcgred_get_redirect_stats' );
 		$this->loader->add_action( 'plugin_row_meta', $plugin_admin, 'kcgred_add_view_details_button', 10, 2 );
+
 	}
 
+
+
+	/**
+	 * Register all of the hooks related to the redirect manager settings
+	 * of the plugin.
+	 *
+	 * @since    1.0.1
+	 * @access   private
+	 */
+	public function define_redirect_manager_settings(){
+		// Redirect Manager Settings
+		$redirect_settings = new kcgred_redirect_settings( $this->get_plugin_name(), $this->get_version() );
+        $this->loader->add_action( 'wp_ajax_kcgred_save_redirect', $redirect_settings, 'kcgred_save_redirect' );
+		$this->loader->add_action( 'template_redirect', $redirect_settings, 'kcgred_process_redirects', 1 );
+		$this->loader->add_action( 'wp_ajax_kcgred_get_redirect_stats', $redirect_settings, 'kcgred_get_redirect_stats' );
+        $this->loader->add_action( 'wp_ajax_kcgred_delete_redirect', $redirect_settings, 'kcgred_delete_redirect' );
+        $this->loader->add_action( 'wp_ajax_kcgred_toggle_redirect', $redirect_settings, 'kcgred_toggle_redirect' );
+        $this->loader->add_action( 'wp_ajax_kcgred_delete_selected_redirects_init', $redirect_settings, 'kcgred_delete_selected_redirects_init' );
+	}
+
+
+
+
+	/**
+	 * Register all of the hooks related to the redirect manager logs settings
+	 * of the plugin.
+	 *
+	 * @since    1.0.1
+	 * @access   private
+	 */
+	public function define_redirect_logs_settings() {
+		// Redirect Manager logs Settings
+		$redirect_logs = new kcgred_error_logs( $this->get_plugin_name(), $this->get_version() );
+		$this->loader->add_action( 'cron_schedules', $redirect_logs, 'kcgred_add_three_days_schedule' );
+		$this->loader->add_action( 'kcgred_cleanup_old_logs', $redirect_logs, 'kcgred_delete_old_redirect_logs' );
+	}
+
+
+
+	/**
+	 * Register all of the hooks related to the redirect manager import export settings
+	 * of the plugin.
+	 *
+	 * @since    1.0.1
+	 * @access   private
+	 */
+	public function define_redirect_import_export_settings(){
+		// Redirect Manager Import Export
+		$redirect_settings = new kcgred_redirect_import_export( $this->get_plugin_name(), $this->get_version() );
+		$this->loader->add_action( 'wp_ajax_kcgred_export_redirects', $redirect_settings, 'kcgred_export_redirects' );
+		$this->loader->add_action( 'wp_ajax_kcgred_import_redirects', $redirect_settings, 'kcgred_import_redirects' );
+	}
+
+
+
 	
+
 	/**
 	 * Run the loader to execute all of the hooks with WordPress.
 	 * @since    1.0.1

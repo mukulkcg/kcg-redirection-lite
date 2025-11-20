@@ -25,8 +25,23 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 class kcgred_activations_init{
+	public function __construct() {
+		$this->kcgred_schedule_cleanup_cron();
+	}
 
 	public static function kcgred_activate() {
+		
+	}
 
+
+	/**
+	 * Redirects Manager Pro Schedule the cron job on plugin activation
+	 *
+     * @since      1.0.1
+	 */
+	public static function kcgred_schedule_cleanup_cron() {
+        if (!wp_next_scheduled('kcgred_cleanup_old_logs')) {
+            wp_schedule_event(time(), 'kcgred_every_three_days', 'kcgred_cleanup_old_logs');
+        }
 	}
 }
