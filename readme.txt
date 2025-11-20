@@ -1,9 +1,9 @@
-=== Redirects Managers ===
-Contributors: Md Ashaduzzaman (Mukul)
+=== Redirects Manager ===
+Contributors: Kings Crest Global
 Tags: redirects, seo, 301, 302, 307
-Requires at least: 6.0
+Requires at least: 6.4
 Tested up to: 6.8
-Requires PHP: 7.4
+Requires PHP: 7.0
 Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,7 +16,7 @@ Redirects Managers helps you manage all your 301, 302, and 307 redirects from on
 == Installation ==
 1. Upload the plugin to `/wp-content/plugins/`
 2. Activate it through the “Plugins” menu in WordPress
-3. Go to “Redirects Managers” in the admin sidebar
+3. Go to “Redirects Manager” in the admin sidebar
 
 == Frequently Asked Questions ==
 = Does it support 404 logging? =
